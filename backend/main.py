@@ -11,14 +11,16 @@ import datetime
 import io
 import json
 import os
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 app = FastAPI(title="ImmoBase API", version="1.0.0")
+
+# DB beim Start initialisieren
+try:
+    db.init_db()
+    db.seed_demo()
+    print("✅ Datenbank bereit")
+except Exception as e:
+    print(f"⚠️ DB Init: {e}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -210,134 +212,8 @@ def get_dokumente(payload = Depends(verify_token)):
 
 @app.get("/export/pdf/{report_type}")
 def export_pdf(report_type: str, payload = Depends(verify_token)):
-    mid = payload["mandant_id"]
-    mandant_name = payload.get("name", "Hausverwaltung")
-    buf = io.BytesIO()
-
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-        leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('title', fontSize=18, fontName='Helvetica-Bold',
-        textColor=colors.HexColor('#1a3a5c'), spaceAfter=4)
-    sub_style = ParagraphStyle('sub', fontSize=10, fontName='Helvetica',
-        textColor=colors.HexColor('#64748b'), spaceAfter=20)
-    head_style = ParagraphStyle('head', fontSize=12, fontName='Helvetica-Bold',
-        textColor=colors.HexColor('#1e4d8c'), spaceBefore=16, spaceAfter=8)
-
-    BLUE = colors.HexColor('#1e4d8c')
-    LIGHT = colors.HexColor('#dbeafe')
-    GREY = colors.HexColor('#f7f8fa')
-
-    elements = []
-    now = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-
-    def make_header(title, subtitle):
-        elements.append(Paragraph(f"ImmoBase — {title}", title_style))
-        elements.append(Paragraph(f"{mandant_name}  ·  Erstellt am {now}", sub_style))
-
-    def styled_table(headers, rows, col_widths):
-        data = [headers] + rows
-        t = Table(data, colWidths=col_widths)
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), BLUE),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,0), 9),
-            ('FONTSIZE', (0,1), (-1,-1), 8),
-            ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, GREY]),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e5ea')),
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 5),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-            ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ]))
-        return t
-
-    if report_type == "mieter":
-        make_header("Mieterliste", "")
-        data = db.get_mieter(mid)
-        elements.append(Paragraph(f"Gesamt: {len(data)} Mieter", sub_style))
-        rows = [[d.get('name',''), d.get('wohnung',''), d.get('kontakt',''),
-                 d.get('mietbeginn',''), d.get('status','')] for d in data]
-        elements.append(styled_table(
-            ['Name', 'Wohnung', 'Kontakt', 'Mietbeginn', 'Status'],
-            rows or [['—','—','—','—','—']],
-            [4.5*cm, 4.5*cm, 4*cm, 3*cm, 2*cm]
-        ))
-
-    elif report_type == "zahlungen":
-        make_header("Zahlungsübersicht", "")
-        data = db.get_zahlungen(mid)
-        offen = sum(1 for d in data if d.get('status') != 'bezahlt')
-        elements.append(Paragraph(f"Gesamt: {len(data)}  ·  Offen: {offen}", sub_style))
-        rows = [[d.get('mieter',''), d.get('wohnung',''),
-                 f"{d.get('betrag','')} €" if d.get('betrag') else '—',
-                 d.get('monat',''), d.get('status','')] for d in data]
-        elements.append(styled_table(
-            ['Mieter', 'Wohnung', 'Betrag', 'Monat', 'Status'],
-            rows or [['—','—','—','—','—']],
-            [4*cm, 4*cm, 2.5*cm, 3.5*cm, 2.5*cm]
-        ))
-
-    elif report_type == "reparaturen":
-        make_header("Reparatur- & Wartungsübersicht", "")
-        data = db.get_reparaturen(mid)
-        offen = sum(1 for d in data if d.get('status') == 'offen')
-        elements.append(Paragraph(f"Gesamt: {len(data)}  ·  Offen: {offen}", sub_style))
-        rows = [[d.get('wohnung',''), d.get('beschreibung',''),
-                 d.get('datum',''), d.get('prioritaet',''), d.get('status','')] for d in data]
-        elements.append(styled_table(
-            ['Wohnung', 'Beschreibung', 'Datum', 'Priorität', 'Status'],
-            rows or [['—','—','—','—','—']],
-            [3.5*cm, 6*cm, 2.5*cm, 2.5*cm, 2.5*cm]
-        ))
-
-    elif report_type == "leerstand":
-        make_header("Wohnungsübersicht & Leerstand", "")
-        data = db.get_wohnungen(mid)
-        leer = sum(1 for d in data if d.get('status') == 'leer')
-        elements.append(Paragraph(f"Gesamt: {len(data)}  ·  Leerstand: {leer}", sub_style))
-        rows = [[d.get('adresse',''), d.get('einheit',''),
-                 f"{d.get('groesse','')} m²" if d.get('groesse') else '—',
-                 f"{d.get('miete','')} €" if d.get('miete') else '—',
-                 d.get('mieter','—'), d.get('status','')] for d in data]
-        elements.append(styled_table(
-            ['Adresse', 'Einheit', 'Größe', 'Kaltmiete', 'Mieter', 'Status'],
-            rows or [['—','—','—','—','—','—']],
-            [4*cm, 2.5*cm, 2*cm, 2.5*cm, 3.5*cm, 2.5*cm]
-        ))
-
-    elif report_type == "gesamt":
-        make_header("Gesamtbericht", "")
-        stats = db.get_stats(mid)
-        elements.append(Paragraph(f"Einheiten: {stats['einheiten']}  ·  Mieter: {stats['mieter']}  ·  Offene Zahlungen: {stats['zahlungen_offen']}  ·  Offene Reparaturen: {stats['reparaturen_offen']}", sub_style))
-
-        elements.append(Paragraph("Mieter", head_style))
-        mieter_data = db.get_mieter(mid)
-        rows = [[d.get('name',''), d.get('wohnung',''), d.get('status','')] for d in mieter_data]
-        elements.append(styled_table(['Name','Wohnung','Status'], rows or [['—','—','—']], [6*cm,8*cm,3*cm]))
-
-        elements.append(Paragraph("Offene Zahlungen", head_style))
-        zahl_data = [d for d in db.get_zahlungen(mid) if d.get('status') != 'bezahlt']
-        rows = [[d.get('mieter',''), d.get('wohnung',''), f"{d.get('betrag','')} €", d.get('status','')] for d in zahl_data]
-        elements.append(styled_table(['Mieter','Wohnung','Betrag','Status'], rows or [['—','—','—','—']], [5*cm,5*cm,3*cm,4*cm]))
-
-        elements.append(Paragraph("Offene Reparaturen", head_style))
-        rep_data = [d for d in db.get_reparaturen(mid) if d.get('status') != 'erledigt']
-        rows = [[d.get('wohnung',''), d.get('beschreibung',''), d.get('prioritaet','')] for d in rep_data]
-        elements.append(styled_table(['Wohnung','Beschreibung','Priorität'], rows or [['—','—','—']], [4*cm,10*cm,3*cm]))
-
-    else:
-        raise HTTPException(status_code=400, detail="Unbekannter Report-Typ")
-
-    doc.build(elements)
-    buf.seek(0)
-    filename = f"immobase_{report_type}_{datetime.date.today()}.pdf"
-    return StreamingResponse(buf, media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"})
+    # PDF export handled in frontend
+    raise HTTPException(status_code=501, detail="PDF export wird im Browser generiert")
 
 @app.get("/")
 def root():
