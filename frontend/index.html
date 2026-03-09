@@ -701,23 +701,17 @@ async function processFile(file) {
   };
 
   try {
-    const base64 = await fileToBase64(file);
     setProgress(30, 'KI analysiert Dokument...');
-    const result = await callClaudeAPI(base64, file.name);
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(API + '/analyse-pdf', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOKEN },
+      body: formData
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail || 'Upload fehlgeschlagen'); }
+    const result = await res.json();
     setProgress(75, 'Daten werden gespeichert...');
-
-    // Save to backend
-    if (!API.includes('DEINE-RAILWAY-URL')) {
-      await apiFetch('/import', { method:'POST', body: JSON.stringify({
-        filename: file.name,
-        dokumenttyp: result.dokumenttyp,
-        zusammenfassung: result.zusammenfassung,
-        mieter: result.mieter||[],
-        zahlungen: result.zahlungen||[],
-        reparaturen: result.reparaturen||[],
-        wohnungen: result.wohnungen||[]
-      })});
-    }
 
     setProgress(100, '✅ Erfolgreich importiert');
     $('spin-'+id).style.display = 'none';

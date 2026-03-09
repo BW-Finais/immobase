@@ -174,6 +174,38 @@ def get_stats(payload = Depends(verify_token)):
 
 # ── DOKUMENTE / IMPORT ──────────────────────────────────────────
 
+# ── PDF ANALYSE (Server-side Claude API call) ────────────────────
+
+@app.post("/analyse-pdf")
+async def analyse_pdf(file: UploadFile = File(...), payload = Depends(verify_token)):
+    import httpx, base64
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+    if not ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY nicht konfiguriert")
+    content = await file.read()
+    b64 = base64.b64encode(content).decode()
+    prompt = """Du bist ein Assistent fuer Hausverwaltungen. Analysiere dieses PDF und extrahiere alle Daten. Antworte NUR mit gueltigem JSON ohne Backticks: {"dokumenttyp":"mieterliste|nebenkosten|zahlungen|reparaturen|leerstand|sonstiges","zusammenfassung":"kurze deutsche Beschreibung","mieter":[{"name":"","wohnung":"","kontakt":"","mietbeginn":"YYYY-MM-DD","mietende":"YYYY-MM-DD","status":"aktiv"}],"zahlungen":[{"mieter":"","wohnung":"","betrag":0,"monat":"","datum":"YYYY-MM-DD","status":"offen"}],"reparaturen":[{"wohnung":"","beschreibung":"","datum":"YYYY-MM-DD","prioritaet":"mittel","status":"offen"}],"wohnungen":[{"adresse":"","einheit":"","groesse":0,"miete":0,"mieter":"","status":"leer"}]}"""
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post("https://api.anthropic.com/v1/messages", headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}, json={"model": "claude-sonnet-4-20250514", "max_tokens": 4000, "messages": [{"role": "user", "content": [{"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}}, {"type": "text", "text": prompt}]}]})
+    if not response.is_success:
+        raise HTTPException(status_code=500, detail=f"Claude API Fehler: {response.text}")
+    text = "".join(c.get("text", "") for c in response.json()["content"])
+    clean = text.replace("```json", "").replace("```", "").strip()
+    try:
+        result = json.loads(clean)
+    except:
+        raise HTTPException(status_code=500, detail="KI-Antwort konnte nicht geparst werden")
+    mid = payload["mandant_id"]
+    counts = {"mieter": 0, "zahlungen": 0, "reparaturen": 0, "wohnungen": 0}
+    for m in result.get("mieter", []): db.create_mieter(mid, m); counts["mieter"] += 1
+    for z in result.get("zahlungen", []): db.create_zahlung(mid, z); counts["zahlungen"] += 1
+    for r in result.get("reparaturen", []): db.create_reparatur(mid, r); counts["reparaturen"] += 1
+    for w in result.get("wohnungen", []): db.create_wohnung(mid, w); counts["wohnungen"] += 1
+    db.log_dokument(mid, file.filename, result.get("dokumenttyp"), result.get("zusammenfassung"), counts)
+    result["counts"] = counts
+    return result
+
+
 class ImportData(BaseModel):
     filename: str
     dokumenttyp: str
