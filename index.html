@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImmoBase — Hausverwaltung Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5de;
+    --blue-deep: #1a3a5c;
+    --blue: #1e4d8c;
+    --blue-mid: #2563b0;
+    --blue-light: #3b82d4;
+    --blue-pale: #dbeafe;
+    --accent: #0ea5e9;
+    --accent2: #38bdf8;
+    --grey: #64748b;
+    --grey-light: #94a3b8;
+    --text: #0f1a2e;
+    --text2: #334155;
+    --text3: #64748b;
+    --green: #10b981;
+    --green-pale: #d1fae5;
+    --red: #ef4444;
+    --red-pale: #fee2e2;
+    --orange: #f59e0b;
+    --orange-pale: #fef3c7;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+  /* LOGIN */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #0f1a2e 0%, #1a3a5c 40%, #1e4d8c 100%);
+    position: relative; overflow: hidden;
+  }
+  #login-screen::before { content:''; position:absolute; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle, rgba(59,130,212,0.15) 0%, transparent 70%); top:-100px; right:-100px; }
+  .login-card { background:var(--surface); border-radius:20px; padding:48px; width:420px; box-shadow:0 24px 64px rgba(0,0,0,0.4); position:relative; z-index:1; }
+  .login-logo { display:flex; align-items:center; gap:12px; margin-bottom:36px; }
+  .login-logo-icon { width:44px; height:44px; background:linear-gradient(135deg,var(--blue),var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .login-logo-text { font-size:22px; font-weight:600; color:var(--blue-deep); letter-spacing:-0.5px; }
+  .login-logo-text span { color:var(--blue-light); }
+  .login-card h2 { font-size:26px; font-weight:600; margin-bottom:8px; letter-spacing:-0.5px; }
+  .login-card p { color:var(--text3); margin-bottom:32px; font-size:14px; }
+  .form-group { margin-bottom:18px; }
+  .form-group label { display:block; font-size:12px; font-weight:500; color:var(--text2); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px; }
+  .form-group input { width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:14px; color:var(--text); background:var(--surface2); transition:border-color 0.2s,box-shadow 0.2s; outline:none; }
+  .form-group input:focus { border-color:var(--blue-light); box-shadow:0 0 0 3px rgba(59,130,212,0.12); background:white; }
+  .btn-primary { width:100%; padding:13px; background:linear-gradient(135deg,var(--blue),var(--blue-light)); color:white; border:none; border-radius:var(--radius-sm); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; margin-top:8px; }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(30,77,140,0.35); }
+  .login-error { margin-top:14px; padding:10px 14px; background:var(--red-pale); border-radius:var(--radius-sm); font-size:12px; color:#991b1b; display:none; }
+  .demo-hint { margin-top:20px; padding:12px; background:var(--blue-pale); border-radius:var(--radius-sm); font-size:12px; color:var(--blue-mid); text-align:center; }
+
+  /* APP */
+  #app { display:none; min-height:100vh; }
+  .sidebar { position:fixed; left:0; top:0; bottom:0; width:240px; background:var(--blue-deep); display:flex; flex-direction:column; z-index:100; }
+  .sidebar-logo { padding:24px 20px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px; }
+  .sidebar-logo-icon { width:36px; height:36px; background:linear-gradient(135deg,var(--blue-light),var(--accent)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .sidebar-logo-text { font-size:17px; font-weight:600; color:white; letter-spacing:-0.3px; }
+  .sidebar-logo-text span { color:var(--accent2); }
+  .sidebar-user { padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .sidebar-user-name { font-size:13px; font-weight:500; color:rgba(255,255,255,0.9); }
+  .sidebar-user-sub { font-size:11px; color:rgba(255,255,255,0.45); margin-top:2px; }
+  .sidebar-nav { flex:1; padding:16px 12px; display:flex; flex-direction:column; gap:2px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; color:rgba(255,255,255,0.55); cursor:pointer; transition:all 0.15s; font-size:13px; font-weight:500; }
+  .nav-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.85); }
+  .nav-item.active { background:rgba(59,130,212,0.25); color:white; }
+  .nav-item .nav-icon { font-size:16px; width:20px; text-align:center; }
+  .sidebar-footer { padding:16px 12px; border-top:1px solid rgba(255,255,255,0.08); }
+  .logout-btn { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; color:rgba(255,255,255,0.45); cursor:pointer; font-size:13px; transition:all 0.15s; width:100%; border:none; background:none; font-family:inherit; }
+  .logout-btn:hover { color:rgba(255,255,255,0.75); background:rgba(255,255,255,0.05); }
+  .main-content { margin-left:240px; min-height:100vh; display:flex; flex-direction:column; }
+  .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 32px; height:64px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+  .topbar-title { font-size:18px; font-weight:600; letter-spacing:-0.3px; }
+  .topbar-right { display:flex; align-items:center; gap:10px; }
+  .topbar-badge { background:var(--blue-pale); color:var(--blue-mid); padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; font-family:'DM Mono',monospace; }
+  .page { display:none; padding:32px; flex:1; }
+  .page.active { display:block; }
+
+  /* STATS */
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+  .stat-card { background:var(--surface); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); border:1px solid var(--border); position:relative; overflow:hidden; }
+  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .stat-card.blue::before { background:linear-gradient(90deg,var(--blue),var(--accent)); }
+  .stat-card.green::before { background:linear-gradient(90deg,var(--green),#34d399); }
+  .stat-card.orange::before { background:linear-gradient(90deg,var(--orange),#fbbf24); }
+  .stat-card.red::before { background:linear-gradient(90deg,var(--red),#f87171); }
+  .stat-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--text3); margin-bottom:10px; }
+  .stat-value { font-size:30px; font-weight:600; letter-spacing:-1px; font-family:'DM Mono',monospace; margin-bottom:4px; }
+  .stat-sub { font-size:12px; color:var(--text3); }
+
+  /* FILTER + TABLE */
+  .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 18px; display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap; box-shadow:var(--shadow); }
+  .filter-bar label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text3); }
+  .filter-select, .filter-input { padding:7px 12px; border:1.5px solid var(--border); border-radius:6px; font-family:inherit; font-size:13px; color:var(--text); background:var(--surface2); outline:none; transition:border-color 0.2s; }
+  .filter-select:focus, .filter-input:focus { border-color:var(--blue-light); }
+  .filter-input { width:180px; }
+  .btn-sm { padding:7px 16px; background:var(--blue); color:white; border:none; border-radius:6px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  .btn-sm:hover { background:var(--blue-light); }
+  .btn-sm:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-outline { padding:7px 16px; background:transparent; color:var(--grey); border:1.5px solid var(--border2); border-radius:6px; font-family:inherit; font-size:12px; font-weight:500; cursor:pointer; transition:all 0.2s; }
+  .btn-outline:hover { border-color:var(--blue-light); color:var(--blue); }
+  .btn-export { padding:7px 16px; background:var(--blue-deep); color:white; border:none; border-radius:6px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px; }
+  .btn-export:hover { background:var(--blue); }
+  .table-container { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { padding:12px 16px; text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--text3); background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th:hover { color:var(--blue); }
+  tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  tbody td { padding:13px 16px; font-size:13px; color:var(--text2); vertical-align:middle; }
+  tbody td.bold { font-weight:600; color:var(--text); }
+  .badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+  .badge-green { background:var(--green-pale); color:#065f46; }
+  .badge-red { background:var(--red-pale); color:#991b1b; }
+  .badge-orange { background:var(--orange-pale); color:#92400e; }
+  .badge-blue { background:var(--blue-pale); color:var(--blue-mid); }
+  .badge-grey { background:#f1f5f9; color:#475569; }
+
+  /* UPLOAD */
+  .upload-zone { border:2px dashed var(--border2); border-radius:var(--radius); padding:56px 32px; text-align:center; cursor:pointer; transition:all 0.2s; background:var(--surface); margin-bottom:24px; }
+  .upload-zone:hover, .upload-zone.drag-over { border-color:var(--blue-light); background:var(--blue-pale); }
+  .upload-zone h3 { font-size:17px; font-weight:600; margin-bottom:8px; }
+  .upload-zone p { color:var(--text3); font-size:13px; margin-bottom:20px; }
+  #file-input { display:none; }
+  .upload-types { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+  .upload-type-tag { padding:4px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; font-size:11px; color:var(--text3); font-weight:500; }
+  .processing-list { display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+  .processing-item { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px 18px; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow); }
+  .processing-info { flex:1; }
+  .processing-name { font-size:13px; font-weight:600; margin-bottom:4px; }
+  .processing-status { font-size:12px; color:var(--text3); }
+  .progress-bar { height:4px; background:var(--border); border-radius:2px; margin-top:8px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--blue),var(--accent)); border-radius:2px; transition:width 0.3s ease; }
+  .ai-result-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); margin-bottom:16px; }
+  .ai-result-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+  .ai-result-title { font-size:15px; font-weight:600; margin-bottom:4px; }
+  .ai-result-sub { font-size:12px; color:var(--text3); }
+  .ai-result-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
+  .ai-field { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+  .ai-field-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text3); margin-bottom:5px; }
+  .ai-field-value { font-size:13px; font-weight:500; font-family:'DM Mono',monospace; }
+
+  /* DASHBOARD */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .card-header { padding:18px 20px; border-bottom:1px solid var(--border); font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
+  .card-body { padding:20px; }
+  .activity-item { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
+  .activity-item:last-child { border-bottom:none; }
+  .activity-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .activity-text { font-size:13px; color:var(--text2); line-height:1.4; }
+  .activity-time { font-size:11px; color:var(--text3); margin-top:2px; font-family:'DM Mono',monospace; }
+  .wohnung-card { border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; transition:all 0.15s; cursor:pointer; }
+  .wohnung-card:hover { border-color:var(--blue-light); background:var(--surface2); }
+  .wohnung-addr { font-size:13px; font-weight:600; }
+  .wohnung-sub { font-size:11px; color:var(--text3); margin-top:2px; }
+
+  /* EXPORT DROPDOWN */
+  .export-group { position:relative; }
+  .export-menu { position:absolute; right:0; top:calc(100% + 6px); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:var(--shadow-md); z-index:100; min-width:200px; overflow:hidden; display:none; }
+  .export-menu.open { display:block; }
+  .export-menu-item { padding:11px 16px; font-size:13px; cursor:pointer; transition:background 0.1s; display:flex; align-items:center; gap:10px; }
+  .export-menu-item:hover { background:var(--surface2); }
+
+  /* MISC */
+  .spinner { width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--blue-light); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .empty-state { text-align:center; padding:48px 32px; color:var(--text3); }
+  .empty-state .empty-icon { font-size:40px; margin-bottom:12px; opacity:0.35; }
+  .empty-state h3 { font-size:15px; font-weight:600; color:var(--text2); margin-bottom:4px; }
+  .empty-state p { font-size:13px; }
+  .toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+  .toast { background:var(--text); color:white; padding:12px 18px; border-radius:8px; font-size:13px; box-shadow:var(--shadow-md); animation:slideIn 0.3s ease; max-width:300px; }
+  .toast.success { background:var(--green); }
+  .toast.error { background:var(--red); }
+  @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .section-title { font-size:15px; font-weight:600; }
+  .api-config { background:var(--blue-pale); border:1px solid #bfdbfe; border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:20px; font-size:12px; color:var(--blue-mid); display:flex; align-items:center; gap:10px; }
+</style>
+</head>
+<body>
+
+<!-- ── CONFIG: Hier deine Railway-URL eintragen ── -->
+<script>
+  // WICHTIG: Nach dem Railway-Deploy hier deine URL eintragen!
+  // Beispiel: const API = "https://immobase.up.railway.app"
+  const API = window.IMMOBASE_API || "https://immobase-production.up.railway.app";
+  let TOKEN = localStorage.getItem("immobase_token") || "";
+  let USER = JSON.parse(localStorage.getItem("immobase_user") || "{}");
+
+  const CLAUDE_API = "https://api.anthropic.com/v1/messages";
+</script>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🏢</div>
+      <div class="login-logo-text">Immo<span>Base</span></div>
+    </div>
+    <h2>Willkommen zurück</h2>
+    <p>Melden Sie sich mit Ihren Zugangsdaten an.</p>
+    <div class="form-group">
+      <label>E-Mail Adresse</label>
+      <input type="email" id="login-email" placeholder="email@hausverwaltung.de" value="muster@hausverwaltung.de">
+    </div>
+    <div class="form-group">
+      <label>Passwort</label>
+      <input type="password" id="login-pw" placeholder="••••••••" value="demo1234" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Anmelden →</button>
+    <div class="login-error" id="login-error"></div>
+    <div class="demo-hint">Demo: <strong>muster@hausverwaltung.de</strong> / <strong>demo1234</strong></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🏢</div>
+      <div class="sidebar-logo-text">Immo<span>Base</span></div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="sidebar-username">—</div>
+      <div class="sidebar-user-sub">Administrator</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('mieter')"><span class="nav-icon">👤</span> Mieter</div>
+      <div class="nav-item" onclick="showPage('zahlungen')"><span class="nav-icon">💶</span> Zahlungen</div>
+      <div class="nav-item" onclick="showPage('reparaturen')"><span class="nav-icon">🔧</span> Reparaturen</div>
+      <div class="nav-item" onclick="showPage('leerstand')"><span class="nav-icon">🏠</span> Leerstand</div>
+      <div class="nav-item" onclick="showPage('upload')"><span class="nav-icon">📁</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()"><span>⬅</span> Abmelden</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-right">
+        <div class="export-group">
+          <button class="btn-export" onclick="toggleExportMenu()">📥 Export PDF ▾</button>
+          <div class="export-menu" id="export-menu">
+            <div class="export-menu-item" onclick="exportPDF('mieter')">👤 Mieterliste</div>
+            <div class="export-menu-item" onclick="exportPDF('zahlungen')">💶 Zahlungsübersicht</div>
+            <div class="export-menu-item" onclick="exportPDF('reparaturen')">🔧 Reparaturen</div>
+            <div class="export-menu-item" onclick="exportPDF('leerstand')">🏠 Leerstandsliste</div>
+            <div class="export-menu-item" onclick="exportPDF('gesamt')" style="border-top:1px solid var(--border);font-weight:600">📋 Gesamtbericht</div>
+          </div>
+        </div>
+        <div class="topbar-badge" id="topbar-date"></div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-label">Einheiten gesamt</div><div class="stat-value" id="stat-einheiten">—</div><div class="stat-sub">Wohnungen & Gewerbe</div></div>
+        <div class="stat-card green"><div class="stat-label">Aktive Mieter</div><div class="stat-value" id="stat-mieter">—</div><div class="stat-sub">Laufende Mietverhältnisse</div></div>
+        <div class="stat-card orange"><div class="stat-label">Offene Zahlungen</div><div class="stat-value" id="stat-offen">—</div><div class="stat-sub">Prüfung empfohlen</div></div>
+        <div class="stat-card red"><div class="stat-label">Reparaturen offen</div><div class="stat-value" id="stat-reparatur">—</div><div class="stat-sub">Offene Aufgaben</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">Letzte Dokumente <span style="font-size:11px;color:var(--text3);font-weight:400">Alle Uploads</span></div>
+          <div class="card-body" id="activity-list"><div class="empty-state"><div class="empty-icon">📋</div><h3>Keine Dokumente</h3><p>Laden Sie PDFs hoch, um zu beginnen.</p></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Wohnungsübersicht <button class="btn-sm" onclick="showPage('leerstand')">Alle →</button></div>
+          <div class="card-body" id="wohnungen-preview"><div class="empty-state"><div class="empty-icon">🏠</div><h3>Noch keine Wohnungen</h3><p>Daten werden nach dem Upload angezeigt.</p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIETER -->
+    <div class="page" id="page-mieter">
+      <div class="filter-bar">
+        <label>Suche</label><input type="text" class="filter-input" id="mieter-search" placeholder="Name, Adresse..." oninput="loadMieter()">
+        <label>Status</label>
+        <select class="filter-select" id="mieter-status-filter" onchange="loadMieter()">
+          <option value="">Alle</option><option value="aktiv">Aktiv</option><option value="beendet">Beendet</option>
+        </select>
+        <button class="btn-outline" onclick="resetFilter('mieter')">Zurücksetzen</button>
+      </div>
+      <div class="table-container">
+        <table><thead><tr>
+          <th>Name</th><th>Wohnung</th><th>Kontakt</th><th>Mietbeginn</th><th>Mietende</th><th>Status</th>
+        </tr></thead><tbody id="mieter-tbody"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">Wird geladen...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ZAHLUNGEN -->
+    <div class="page" id="page-zahlungen">
+      <div class="filter-bar">
+        <label>Suche</label><input type="text" class="filter-input" id="zahlung-search" placeholder="Mieter, Wohnung..." oninput="loadZahlungen()">
+        <label>Status</label>
+        <select class="filter-select" id="zahlung-status-filter" onchange="loadZahlungen()">
+          <option value="">Alle</option><option value="bezahlt">Bezahlt</option><option value="offen">Offen</option><option value="überfällig">Überfällig</option>
+        </select>
+        <button class="btn-outline" onclick="resetFilter('zahlung')">Zurücksetzen</button>
+      </div>
+      <div class="table-container">
+        <table><thead><tr>
+          <th>Mieter</th><th>Wohnung</th><th>Betrag</th><th>Monat</th><th>Eingangsdatum</th><th>Status</th>
+        </tr></thead><tbody id="zahlung-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- REPARATUREN -->
+    <div class="page" id="page-reparaturen">
+      <div class="filter-bar">
+        <label>Suche</label><input type="text" class="filter-input" id="rep-search" placeholder="Beschreibung, Wohnung..." oninput="loadReparaturen()">
+        <label>Status</label>
+        <select class="filter-select" id="rep-status-filter" onchange="loadReparaturen()">
+          <option value="">Alle</option><option value="offen">Offen</option><option value="in bearbeitung">In Bearbeitung</option><option value="erledigt">Erledigt</option>
+        </select>
+        <label>Priorität</label>
+        <select class="filter-select" id="rep-prio-filter" onchange="loadReparaturen()">
+          <option value="">Alle</option><option value="hoch">Hoch</option><option value="mittel">Mittel</option><option value="niedrig">Niedrig</option>
+        </select>
+        <button class="btn-outline" onclick="resetFilter('rep')">Zurücksetzen</button>
+      </div>
+      <div class="table-container">
+        <table><thead><tr>
+          <th>Wohnung</th><th>Beschreibung</th><th>Gemeldet am</th><th>Priorität</th><th>Status</th><th>Aktion</th>
+        </tr></thead><tbody id="rep-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- LEERSTAND -->
+    <div class="page" id="page-leerstand">
+      <div class="filter-bar">
+        <label>Adresse</label><input type="text" class="filter-input" id="leer-search" placeholder="Adresse suchen..." oninput="loadLeerstand()">
+        <label>Status</label>
+        <select class="filter-select" id="leer-status-filter" onchange="loadLeerstand()">
+          <option value="">Alle</option><option value="leer">Leerstand</option><option value="vermietet">Vermietet</option>
+        </select>
+        <button class="btn-outline" onclick="resetFilter('leer')">Zurücksetzen</button>
+      </div>
+      <div class="table-container">
+        <table><thead><tr>
+          <th>Adresse</th><th>Einheit</th><th>Größe</th><th>Kaltmiete</th><th>Aktueller Mieter</th><th>Status</th>
+        </tr></thead><tbody id="leer-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="page" id="page-upload">
+      <div class="api-config" id="api-config-hint">
+        ⚠️ <strong>Backend-URL nicht konfiguriert.</strong> Öffne die HTML-Datei und trage deine Railway-URL ein (Zeile ~130). Bis dahin wird die KI-Auslese trotzdem funktionieren, aber Daten werden nicht gespeichert.
+      </div>
+      <div class="upload-zone" id="upload-zone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="handleDrop(event)">
+        <div style="font-size:48px;margin-bottom:16px;opacity:0.4">📄</div>
+        <h3>PDF-Dokumente hochladen</h3>
+        <p>Klicken oder Dateien hineinziehen</p>
+        <button class="btn-sm" onclick="event.stopPropagation();document.getElementById('file-input').click()">Dateien auswählen</button>
+        <div class="upload-types">
+          <span class="upload-type-tag">Mieterliste</span>
+          <span class="upload-type-tag">Nebenkostenabrechnung</span>
+          <span class="upload-type-tag">Zahlungseingang</span>
+          <span class="upload-type-tag">Reparaturliste</span>
+          <span class="upload-type-tag">Leerstandsliste</span>
+        </div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf" multiple onchange="handleFiles(this.files)">
+      <div id="processing-list" class="processing-list"></div>
+      <div id="results-container"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ── HELPERS ──────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function fmt(d) {
+  if (!d) return '—';
+  try { const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+  catch { return d; }
+}
+function badge(text, color) { return `<span class="badge badge-${color}">${text||'—'}</span>`; }
+function emptyRow(cols, msg) { return `<tr><td colspan="${cols}" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">${msg}</td></tr>`; }
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+function showToast(msg, type='') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  $('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+function badgeForStatus(s) {
+  if (!s) return badge('—','grey');
+  const sl = s.toLowerCase();
+  if (['aktiv','bezahlt','vermietet','erledigt'].includes(sl)) return badge(s,'green');
+  if (['überfällig','hoch','leer'].includes(sl)) return badge(s,'red');
+  if (['offen','mittel','in bearbeitung'].includes(sl)) return badge(s,'orange');
+  return badge(s,'grey');
+}
+
+// ── API ──────────────────────────────────────────────────────────
+async function apiFetch(path, opts={}) {
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN, ...(opts.headers||{}) }
+  });
+  if (res.status === 401) { doLogout(); throw new Error('Nicht autorisiert'); }
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail || 'API-Fehler'); }
+  return res.json();
+}
+
+// ── AUTH ─────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = $('login-email').value;
+  const pw = $('login-pw').value;
+  const btn = $('login-btn');
+  const errEl = $('login-error');
+  errEl.style.display = 'none';
+  btn.textContent = 'Wird angemeldet...'; btn.disabled = true;
+  try {
+    const data = await apiFetch('/auth/login', {
+      method:'POST', body: JSON.stringify({email, password:pw})
+    });
+    TOKEN = data.token;
+    USER = {name: data.name, email: data.email};
+    localStorage.setItem('immobase_token', TOKEN);
+    localStorage.setItem('immobase_user', JSON.stringify(USER));
+    initApp();
+  } catch(e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally { btn.textContent = 'Anmelden →'; btn.disabled = false; }
+}
+
+function doLogout() {
+  TOKEN = ''; USER = {};
+  localStorage.removeItem('immobase_token');
+  localStorage.removeItem('immobase_user');
+  $('app').style.display = 'none';
+  $('login-screen').style.display = 'flex';
+}
+
+function initApp() {
+  $('login-screen').style.display = 'none';
+  $('app').style.display = 'flex';
+  $('sidebar-username').textContent = USER.name || USER.email || '—';
+  $('topbar-date').textContent = new Date().toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  // Check if API URL is configured
+  if (API.includes('DEINE-RAILWAY-URL')) {
+    $('api-config-hint').style.display = 'flex';
+  } else {
+    $('api-config-hint').style.display = 'none';
+  }
+  showPage('dashboard');
+}
+
+// Auto-login if token exists
+window.addEventListener('load', () => {
+  $('topbar-date').textContent = new Date().toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  if (TOKEN && USER.name) initApp();
+});
+
+// ── NAVIGATION ───────────────────────────────────────────────────
+const pageTitles = { dashboard:'Dashboard', mieter:'Mieterverwaltung', zahlungen:'Zahlungseingänge', reparaturen:'Reparaturen & Wartung', leerstand:'Wohnungsübersicht', upload:'Dokumente hochladen' };
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => { if(n.getAttribute('onclick').includes(name)) n.classList.add('active'); });
+  $('topbar-title').textContent = pageTitles[name];
+  if (name==='dashboard') loadDashboard();
+  else if (name==='mieter') loadMieter();
+  else if (name==='zahlungen') loadZahlungen();
+  else if (name==='reparaturen') loadReparaturen();
+  else if (name==='leerstand') loadLeerstand();
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const stats = await apiFetch('/stats');
+    $('stat-einheiten').textContent = stats.einheiten;
+    $('stat-mieter').textContent = stats.mieter;
+    $('stat-offen').textContent = stats.zahlungen_offen;
+    $('stat-reparatur').textContent = stats.reparaturen_offen;
+
+    const docs = await apiFetch('/dokumente');
+    if (docs.length === 0) {
+      $('activity-list').innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>Keine Dokumente</h3><p>Laden Sie PDFs hoch, um zu beginnen.</p></div>`;
+    } else {
+      $('activity-list').innerHTML = docs.slice(0,6).map(d=>`
+        <div class="activity-item">
+          <div class="activity-dot" style="background:var(--green)"></div>
+          <div>
+            <div class="activity-text"><strong>${d.filename}</strong> — ${d.dokumenttyp||'Dokument'}</div>
+            <div class="activity-time">${fmt(d.created_at)}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    const wohnungen = await apiFetch('/wohnungen');
+    if (wohnungen.length === 0) {
+      $('wohnungen-preview').innerHTML = `<div class="empty-state"><div class="empty-icon">🏠</div><h3>Noch keine Wohnungen</h3><p>Daten werden nach dem Upload angezeigt.</p></div>`;
+    } else {
+      $('wohnungen-preview').innerHTML = wohnungen.slice(0,5).map(w=>`
+        <div class="wohnung-card" onclick="showPage('leerstand')">
+          <div>
+            <div class="wohnung-addr">${w.adresse||'—'} ${w.einheit?'· '+w.einheit:''}</div>
+            <div class="wohnung-sub">${w.mieter||'Leerstand'} ${w.miete?'· '+w.miete+' €':''}</div>
+          </div>
+          ${badgeForStatus(w.status)}
+        </div>`).join('');
+    }
+  } catch(e) { showToast('Dashboard konnte nicht geladen werden', 'error'); }
+}
+
+// ── MIETER ───────────────────────────────────────────────────────
+async function loadMieter() {
+  const search = $('mieter-search').value;
+  const status = $('mieter-status-filter').value;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  try {
+    const data = await apiFetch('/mieter?' + params);
+    const tbody = $('mieter-tbody');
+    if (!data.length) { tbody.innerHTML = emptyRow(6,'Keine Mieter gefunden'); return; }
+    tbody.innerHTML = data.map(m=>`<tr>
+      <td class="bold">${m.name}</td>
+      <td>${m.wohnung||'—'}</td>
+      <td>${m.kontakt||'—'}</td>
+      <td>${fmt(m.mietbeginn)}</td>
+      <td>${fmt(m.mietende)}</td>
+      <td>${badgeForStatus(m.status)}</td>
+    </tr>`).join('');
+  } catch(e) { $('mieter-tbody').innerHTML = emptyRow(6,'Fehler beim Laden'); }
+}
+
+// ── ZAHLUNGEN ────────────────────────────────────────────────────
+async function loadZahlungen() {
+  const search = $('zahlung-search').value;
+  const status = $('zahlung-status-filter').value;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  try {
+    const data = await apiFetch('/zahlungen?' + params);
+    const tbody = $('zahlung-tbody');
+    if (!data.length) { tbody.innerHTML = emptyRow(6,'Keine Zahlungen gefunden'); return; }
+    tbody.innerHTML = data.map(z=>`<tr>
+      <td class="bold">${z.mieter}</td>
+      <td>${z.wohnung||'—'}</td>
+      <td style="font-family:'DM Mono',monospace">${z.betrag!=null?z.betrag+' €':'—'}</td>
+      <td>${z.monat||'—'}</td>
+      <td>${fmt(z.datum)}</td>
+      <td>${badgeForStatus(z.status)}</td>
+    </tr>`).join('');
+  } catch(e) { $('zahlung-tbody').innerHTML = emptyRow(6,'Fehler beim Laden'); }
+}
+
+// ── REPARATUREN ──────────────────────────────────────────────────
+async function loadReparaturen() {
+  const search = $('rep-search').value;
+  const status = $('rep-status-filter').value;
+  const prio = $('rep-prio-filter').value;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  if (prio) params.set('prioritaet', prio);
+  try {
+    const data = await apiFetch('/reparaturen?' + params);
+    const tbody = $('rep-tbody');
+    if (!data.length) { tbody.innerHTML = emptyRow(6,'Keine Reparaturen gefunden'); return; }
+    tbody.innerHTML = data.map(r=>`<tr>
+      <td class="bold">${r.wohnung||'—'}</td>
+      <td>${r.beschreibung}</td>
+      <td>${fmt(r.datum)}</td>
+      <td>${badgeForStatus(r.prioritaet)}</td>
+      <td>${badgeForStatus(r.status)}</td>
+      <td>
+        <select onchange="updateRepStatus(${r.id},this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface2);cursor:pointer">
+          <option ${r.status==='offen'?'selected':''} value="offen">Offen</option>
+          <option ${r.status==='in bearbeitung'?'selected':''} value="in bearbeitung">In Bearbeitung</option>
+          <option ${r.status==='erledigt'?'selected':''} value="erledigt">Erledigt</option>
+        </select>
+      </td>
+    </tr>`).join('');
+  } catch(e) { $('rep-tbody').innerHTML = emptyRow(6,'Fehler beim Laden'); }
+}
+
+async function updateRepStatus(id, status) {
+  try {
+    await apiFetch('/reparaturen/'+id, {method:'PATCH', body: JSON.stringify({status})});
+    showToast('Status aktualisiert', 'success');
+    loadReparaturen();
+  } catch(e) { showToast('Fehler beim Aktualisieren', 'error'); }
+}
+
+// ── LEERSTAND ────────────────────────────────────────────────────
+async function loadLeerstand() {
+  const search = $('leer-search').value;
+  const status = $('leer-status-filter').value;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  try {
+    const data = await apiFetch('/wohnungen?' + params);
+    const tbody = $('leer-tbody');
+    if (!data.length) { tbody.innerHTML = emptyRow(6,'Keine Wohnungen gefunden'); return; }
+    tbody.innerHTML = data.map(w=>`<tr>
+      <td class="bold">${w.adresse||'—'}</td>
+      <td>${w.einheit||'—'}</td>
+      <td>${w.groesse!=null?w.groesse+' m²':'—'}</td>
+      <td style="font-family:'DM Mono',monospace">${w.miete!=null?w.miete+' €':'—'}</td>
+      <td>${w.mieter||'—'}</td>
+      <td>${badgeForStatus(w.status)}</td>
+    </tr>`).join('');
+  } catch(e) { $('leer-tbody').innerHTML = emptyRow(6,'Fehler beim Laden'); }
+}
+
+// ── FILTER RESET ─────────────────────────────────────────────────
+function resetFilter(type) {
+  if (type==='mieter') { $('mieter-search').value=''; $('mieter-status-filter').value=''; loadMieter(); }
+  else if (type==='zahlung') { $('zahlung-search').value=''; $('zahlung-status-filter').value=''; loadZahlungen(); }
+  else if (type==='rep') { $('rep-search').value=''; $('rep-status-filter').value=''; $('rep-prio-filter').value=''; loadReparaturen(); }
+  else if (type==='leer') { $('leer-search').value=''; $('leer-status-filter').value=''; loadLeerstand(); }
+}
+
+// ── PDF EXPORT ───────────────────────────────────────────────────
+function toggleExportMenu() {
+  $('export-menu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.export-group')) $('export-menu').classList.remove('open');
+});
+
+async function exportPDF(type) {
+  $('export-menu').classList.remove('open');
+  showToast('PDF wird erstellt...', '');
+  try {
+    const res = await fetch(API + '/export/pdf/' + type, {
+      headers: { 'Authorization': 'Bearer ' + TOKEN }
+    });
+    if (!res.ok) throw new Error('Export fehlgeschlagen');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `immobase_${type}_${new Date().toISOString().slice(0,10)}.pdf`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast('PDF erfolgreich exportiert!', 'success');
+  } catch(e) { showToast('Export fehlgeschlagen: ' + e.message, 'error'); }
+}
+
+// ── FILE UPLOAD & AI ──────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault(); $('upload-zone').classList.remove('drag-over'); handleFiles(e.dataTransfer.files);
+}
+async function handleFiles(files) {
+  for (const file of files) {
+    if (!file.name.endsWith('.pdf')) { showToast(file.name+' ist keine PDF-Datei','error'); continue; }
+    await processFile(file);
+  }
+}
+
+async function processFile(file) {
+  const id = Date.now() + Math.random();
+  const container = $('processing-list');
+  const el = document.createElement('div');
+  el.className = 'processing-item'; el.id = 'proc-'+id;
+  el.innerHTML = `<div style="font-size:24px">📄</div>
+    <div class="processing-info">
+      <div class="processing-name">${file.name}</div>
+      <div class="processing-status" id="pstatus-${id}">Wird gelesen...</div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-${id}" style="width:0%"></div></div>
+    </div><div class="spinner" id="spin-${id}"></div>`;
+  container.prepend(el);
+
+  const setProgress = (p, msg) => {
+    $('prog-'+id).style.width = p+'%';
+    $('pstatus-'+id).textContent = msg;
+  };
+
+  try {
+    const base64 = await fileToBase64(file);
+    setProgress(30, 'KI analysiert Dokument...');
+    const result = await callClaudeAPI(base64, file.name);
+    setProgress(75, 'Daten werden gespeichert...');
+
+    // Save to backend
+    if (!API.includes('DEINE-RAILWAY-URL')) {
+      await apiFetch('/import', { method:'POST', body: JSON.stringify({
+        filename: file.name,
+        dokumenttyp: result.dokumenttyp,
+        zusammenfassung: result.zusammenfassung,
+        mieter: result.mieter||[],
+        zahlungen: result.zahlungen||[],
+        reparaturen: result.reparaturen||[],
+        wohnungen: result.wohnungen||[]
+      })});
+    }
+
+    setProgress(100, '✅ Erfolgreich importiert');
+    $('spin-'+id).style.display = 'none';
+    showResultCard(result, file.name);
+    showToast(file.name+' erfolgreich verarbeitet!', 'success');
+    if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
+
+  } catch(e) {
+    setProgress(100, '❌ Fehler: '+e.message);
+    $('spin-'+id).style.display = 'none';
+    showToast('Fehler: '+e.message, 'error');
+  }
+}
+
+async function callClaudeAPI(base64, filename) {
+  const prompt = `Du bist ein Assistent für Hausverwaltungen. Analysiere dieses PDF und extrahiere alle Daten.
+Antworte NUR mit gültigem JSON ohne Backticks:
+{
+  "dokumenttyp": "mieterliste|nebenkosten|zahlungen|reparaturen|leerstand|sonstiges",
+  "zusammenfassung": "kurze deutsche Beschreibung",
+  "mieter": [{"name":"","wohnung":"","kontakt":"","mietbeginn":"YYYY-MM-DD","mietende":"YYYY-MM-DD","status":"aktiv"}],
+  "zahlungen": [{"mieter":"","wohnung":"","betrag":0,"monat":"","datum":"YYYY-MM-DD","status":"offen"}],
+  "reparaturen": [{"wohnung":"","beschreibung":"","datum":"YYYY-MM-DD","prioritaet":"mittel","status":"offen"}],
+  "wohnungen": [{"adresse":"","einheit":"","groesse":0,"miete":0,"mieter":"","status":"leer"}]
+}
+Extrahiere alle im Dokument vorhandenen Daten vollständig.`;
+
+  const res = await fetch(CLAUDE_API, {
+    method:'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      messages:[{role:'user',content:[
+        {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+        {type:'text',text:prompt}
+      ]}]
+    })
+  });
+  if (!res.ok) throw new Error('Claude API Fehler: '+res.status);
+  const data = await res.json();
+  const text = data.content.map(c=>c.text||'').join('');
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+}
+
+function showResultCard(result, filename) {
+  const counts = [
+    result.mieter?.length ? result.mieter.length+' Mieter' : null,
+    result.zahlungen?.length ? result.zahlungen.length+' Zahlungen' : null,
+    result.reparaturen?.length ? result.reparaturen.length+' Reparaturen' : null,
+    result.wohnungen?.length ? result.wohnungen.length+' Wohnungen' : null,
+  ].filter(Boolean);
+  const card = document.createElement('div');
+  card.className = 'ai-result-card';
+  card.innerHTML = `
+    <div class="ai-result-header">
+      <div><div class="ai-result-title">✅ ${filename}</div><div class="ai-result-sub">${result.zusammenfassung||'Erfolgreich ausgelesen'}</div></div>
+      <span class="badge badge-green">Importiert</span>
+    </div>
+    <div class="ai-result-grid">
+      <div class="ai-field"><div class="ai-field-label">Dokumenttyp</div><div class="ai-field-value">${result.dokumenttyp||'—'}</div></div>
+      <div class="ai-field"><div class="ai-field-label">Datei</div><div class="ai-field-value">${filename}</div></div>
+      <div class="ai-field"><div class="ai-field-label">Datum</div><div class="ai-field-value">${new Date().toLocaleDateString('de-DE')}</div></div>
+      <div class="ai-field"><div class="ai-field-label">Extrahiert</div><div class="ai-field-value">${counts.join(', ')||'—'}</div></div>
+    </div>`;
+  $('results-container').prepend(card);
+}
+
+function fileToBase64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = ()=>res(r.result.split(',')[1]);
+    r.onerror = ()=>rej(new Error('Datei konnte nicht gelesen werden'));
+    r.readAsDataURL(file);
+  });
+}
+</script>
+</body>
+</html>
